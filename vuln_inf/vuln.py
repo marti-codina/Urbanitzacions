@@ -23,7 +23,7 @@ high_vuln = ['ind', 'ins', 'edu', 'san', 'enu', 'eaf', 'eeo', 'ehí', 'iel',
 medium_vuln = ['jac', 'hot', 'bal', 'cam', 'pat']
 low_vuln = ['ele', 'fut', 'mcs', 'ten', 'ces', 'esp', 'mon', 'cas']
 
-# 3. Filtrar només edificis vulnerables (excloem 'altres')
+# 3. Filtrar només edificis vulnerables
 edificis_vulnerables = edificis[edificis['tipus'].isin(high_vuln + medium_vuln + low_vuln)].copy()
 
 # 4. Classificar edificis per vulnerabilitat
@@ -39,60 +39,43 @@ buildings_in_urb = gpd.sjoin(
     predicate='within'
 )
 
-# 6. Crear strings concatenats per ID i tipus
-concat_data = buildings_in_urb.groupby(['NOM', 'vulnerabilitat']).agg({
+# 6. Crear resum per NOM i vulnerabilitat
+summary = buildings_in_urb.groupby(['NOM', 'vulnerabilitat']).agg({
     'id': lambda x: ', '.join(map(str, x)),
-    'tipus': lambda x: ', '.join(x)
-}).unstack()
+    'tipus': lambda x: ', '.join(x),
+    'vulnerabilitat': 'count'
+}).rename(columns={'vulnerabilitat': 'count'}).reset_index()
 
-# Reorganitzar les columnes
-concat_data.columns = [
-    'High_vuln_ids', 'High_vuln_tipus',
-    'Medium_vuln_ids', 'Medium_vuln_tipus',
-    'Low_vuln_ids', 'Low_vuln_tipus'
-]
+# 7. Preparar dades per a cada nivell de vulnerabilitat
+vuln_levels = ['High', 'Medium', 'Low']
+result_data = urb[['NOM', 'geometry']].copy()
 
-# 7. Comptar edificis per vulnerabilitat
-count_data = buildings_in_urb.groupby('NOM')['vulnerabilitat'].value_counts().unstack(fill_value=0)
-count_data = count_data.rename(columns={
-    'High': 'High_vuln_count',
-    'Medium': 'Medium_vuln_count',
-    'Low': 'Low_vuln_count'
-})
+for vuln in vuln_levels:
+    # Filtrar per nivell de vulnerabilitat
+    temp = summary[summary['vulnerabilitat'] == vuln]
+    
+    # Afegir columnes de comptatge
+    result_data[f'{vuln}_vuln_count'] = result_data['NOM'].map(
+        temp.set_index('NOM')['count']).fillna(0).astype(int)
+    
+    # Afegir columnes de llistes
+    result_data[f'{vuln}_vuln_ids'] = result_data['NOM'].map(
+        temp.set_index('NOM')['id']).fillna('')
+    result_data[f'{vuln}_vuln_tipus'] = result_data['NOM'].map(
+        temp.set_index('NOM')['tipus']).fillna('')
 
-# 8. Fusionar totes les dades
-urb_with_vulnerability = urb.merge(
-    count_data,
-    on='NOM',
-    how='left'
-).merge(
-    concat_data,
-    on='NOM',
-    how='left'
+# 8. Calcular total d'edificis
+result_data['Total_edificis'] = (
+    result_data['High_vuln_count'] + 
+    result_data['Medium_vuln_count'] + 
+    result_data['Low_vuln_count']
 )
 
-# 9. Omplir valors NaN
-for col in ['High_vuln_count', 'Medium_vuln_count', 'Low_vuln_count',
-            'High_vuln_ids', 'High_vuln_tipus',
-            'Medium_vuln_ids', 'Medium_vuln_tipus',
-            'Low_vuln_ids', 'Low_vuln_tipus']:
-    if col.endswith('_count'):
-        urb_with_vulnerability[col] = urb_with_vulnerability[col].fillna(0).astype(int)
-    else:
-        urb_with_vulnerability[col] = urb_with_vulnerability[col].fillna('')
-
-# 10. Calcular total
-urb_with_vulnerability['Total_edificis'] = (
-    urb_with_vulnerability['High_vuln_count'] +
-    urb_with_vulnerability['Medium_vuln_count'] +
-    urb_with_vulnerability['Low_vuln_count']
-)
-
-# 11. Guardar resultats
+# 9. Guardar resultats
 output_file = os.path.join(dataout, "Urbanitzacions_Vulnerabilitat_Detallat.shp")
-urb_with_vulnerability.to_file(output_file)
+result_data.to_file(output_file)
 
-# 12. Mostrar resum
+# 10. Mostrar resum
 print("Resum d'edificis per vulnerabilitat:")
-print(urb_with_vulnerability[['NOM', 'High_vuln_count', 'Medium_vuln_count', 'Low_vuln_count', 'Total_edificis']].head())
+print(result_data[['NOM', 'High_vuln_count', 'Medium_vuln_count', 'Low_vuln_count', 'Total_edificis']].head())
 print(f"\nFitxer guardat a: {output_file}")
