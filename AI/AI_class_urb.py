@@ -13,37 +13,38 @@ urb_file = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp')
 # Assegura't que la columna "nom" existeix
 assert "NOM" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
 
+AI['Area_veg'] = AI.geometry.area
+urb_file = urb_file.rename(columns={'Area':'Area_urb'})
+
+#print(AI.columns)
+#print(urb_file.columns)
+
 # Manté només la geometria i la columna 'nom' per fer la unió espacial
-AI_urb = AI.sjoin(urb_file[["NOM", "geometry", "Area"]], how='inner', predicate='intersects')
+AI_selceted = AI[["IFH", "geometry", "Area_veg", "NOM"]]
+AI_urb = AI.sjoin(urb_file[["NOM", "geometry", "Area_urb"]], how='inner', predicate='intersects')
+AI_urb["weighted_IFH"] = AI_urb["IFH"]*AI_urb["Area_veg"]
 
-# Inicialitza les columnes H1-H7
-for h in range(1, 8):
-    urb_file[f"H{h}"] = 0.0
+#print(AI_urb.columns)
+
+# Alternative grouping that preserves the index_right
+result = AI_urb.groupby('index_right').agg(
+    weighted_avg_IFH=('weighted_IFH', 'sum'),
+    total_AI_area=('Area_veg', 'sum')
+)
+result['weighted_avg_IFH'] = result['weighted_avg_IFH'] / result['total_AI_area']
+result = result.reset_index()
+
+urb_with_avg = urb_file.merge(result, left_index=True, right_on='index_right', how='left')
+urb_with_avg = urb_with_avg.drop(columns=['index_right'])
 
 
-print(AI_urb.columns)
-
-# Calcula la suma d'àrees per IFH per cada urbanització
-for h in range(1, 8):
-    summary = AI_urb[AI_urb["IFH"] == h].groupby("NOM_left")["Area"].sum()
-    urb_file.loc[urb_file["NOM"].isin(summary.index), f"H{h}"] = urb_file["NOM"].map(summary).fillna(0)
-
-# Calcula la mitjana ponderada H_mitja
-weights = np.arange(1, 8)
-H_cols = [f"H{h}" for h in weights]
-
-urb_file["sum_Hi*i"] = urb_file[H_cols].multiply(weights, axis=1).sum(axis=1)
-urb_file["Tot_A_poli"] = urb_file[H_cols].sum(axis=1)
-
-# Evita divisió per 0
-urb_file["H_mitja"] = urb_file["sum_Hi*i"] / urb_file["Tot_A_poli"]
-urb_file["H_mitja"] = urb_file["H_mitja"].fillna(0)
-
-# Hazard cobertura: mitjana ponderada ajustada a l'àrea de la urbanització
-urb_file["Hazard_cobertura"] = urb_file["H_mitja"] * (urb_file["Tot_A_poli"] / urb_file["Area"])
+urb_with_avg['new_index'] = (
+    urb_with_avg['weighted_avg_IFH'] / 
+    (urb_with_avg['total_AI_area'] / urb_with_avg['Area_urb'])
+)
 
 # Desa el resultat
-output_file = os.path.join(dataout, "URB_AI.shp")
-urb_file.to_file(output_file)
+output_file = os.path.join(dataout, "urb_AI.shp")
+urb_with_avg.to_file(output_file)
 
 print("Shapefile URB_AI.shp guardat correctament.")

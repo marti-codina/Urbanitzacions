@@ -1,55 +1,49 @@
-import pandas as pd
-import geopandas as  gpd
+import geopandas as gpd
 import numpy as np
 import os
-import sys
 
-
+# Input/output paths
 data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
-dataout = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
+dataout = data  # Using same directory for output
 
-tpi_file = gpd.read_file(data + 'tpi_file.shp')
-urb_file = gpd.read_file(data + 'URB_PILOT.shp')
+# Load data
+tpi_file = gpd.read_file(data + 'TPI_PILOT_VECT.shp')
+urb_file = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp').rename(columns={'Area': 'Area_urb'})
+tpi_file['Area_tpi'] = tpi_file.geometry.area
 
+# Spatial join
 tpi_urb = tpi_file.sjoin(urb_file, how='inner', predicate='intersects')
 
-urb_file["barranc"] = -1
-urb_file["pedent"] = -1
-urb_file["carena"] = -1
-urb_file["% barranc"] = -1
-urb_file["% penendt"] = -1
-urb_file["% carena"] = -1
+# Initialize result columns
+for col in ['barranc', 'pedent', 'carena', '% barranc', '% pendent', '% carena', 'TPI']:
+    urb_file[col] = -1  # Initialize with -1 (or consider using NaN)
 
-for irow, row in urb_file.iterrows():
-    tpi_sub = tpi_urb[tpi_urb["index_right"] == irow]
-    urb_file.at[irow, 'barranc'] = tpi_sub[tpi_sub["DN"].isin([1, 2, 3])]["Area"].sum()
-    urb_file.at[irow, 'pedent'] = tpi_sub[tpi_sub["DN"].isin([6, 7])]["Area"].sum()
-    urb_file.at[irow, 'carena'] = tpi_sub[tpi_sub["DN"].isin([9, 10])]["Area"].sum()
-    urb_file.at[irow, '% barranc'] = urb_file.at[irow, 'barranc'] / urb_file.at[irow, 'Area']
-    urb_file.at[irow, '% pendent'] = urb_file.at[irow, 'barranc'] / urb_file.at[irow, 'Area']
-    urb_file.at[irow, '% carena'] = urb_file.at[irow, 'barranc'] / urb_file.at[irow, 'Area']
+# Calculate areas by category using groupby (more efficient than iterrows)
+# More efficient way using groupby + aggregation
+area_sums = tpi_urb.groupby(['index_right', 'DN'])['Area_tpi'].sum().unstack()
 
-# Afegeix columna TPI
-urb_file["TPI"] = 0
+urb_file['barranc'] = area_sums[[1, 2, 3]].sum(axis=1).reindex(urb_file.index, fill_value=0)
+urb_file['pedent'] = area_sums[[6, 7]].sum(axis=1).reindex(urb_file.index, fill_value=0)
+urb_file['carena'] = area_sums[[9, 10]].sum(axis=1).reindex(urb_file.index, fill_value=0)
 
-cond1 = (urb_file["% barranc"] >= 0.1) | (urb_file["% pendent"] >= 0.3) | (urb_file["% carena"] >= 0.2)
-cond2 = (
-    ((urb_file["% barranc"] >= 0.1) & (urb_file["% pendent"] >= 0.3)) |
-    ((urb_file["% barranc"] >= 0.1) & (urb_file["% carena"] >= 0.2)) |
-    ((urb_file["% pendent"] >= 0.3) & (urb_file["% carena"] >= 0.2))
-)
-cond3 = (
-    (urb_file["% barranc"] >= 0.1) &
-    (urb_file["% pendent"] >= 0.3) &
-    (urb_file["% carena"] >= 0.2)
-)
+# Calculate percentages (with zero division protection)
+urb_file['% barranc'] = (urb_file['barranc'] / urb_file['Area_urb'].replace(0, 1))*100
+urb_file['% pendent'] = (urb_file['pedent'] / urb_file['Area_urb'].replace(0, 1))*100
+urb_file['% carena'] = (urb_file['carena'] / urb_file['Area_urb'].replace(0, 1))*100
 
-urb_file.loc[cond1, "TPI"] = 1
-urb_file.loc[cond2, "TPI"] = 2
-urb_file.loc[cond3, "TPI"] = 3
+# Calculate TPI index
+conditions = [
+    ((urb_file['% barranc'] >= 10) & (urb_file['% pendent'] >= 30) & (urb_file['% carena'] >= 20)),
+    ((urb_file['% barranc'] >= 10) & (urb_file['% pendent'] >= 30)) |
+    ((urb_file['% barranc'] >= 10) & (urb_file['% carena'] >= 20)) |
+    ((urb_file['% pendent'] >= 30) & (urb_file['% carena'] >= 20)),
+    (urb_file['% barranc'] >= 10) | (urb_file['% pendent'] >= 30) | (urb_file['% carena'] >= 20)
+]
 
-no_cond = ~(cond1 | cond2 | cond3)
-urb_file.loc[no_cond, "TPI"] = 0
+choices = [3, 2, 1]
+urb_file['TPI'] = np.select(conditions, choices, default=0)
 
-output_file= os.path.join(dataout, "URB_TPI.shp")
-print("urb_tpi saved")
+# Save result
+output_file = os.path.join(dataout, "URB_TPI.shp")
+urb_file.to_file(output_file)
+print(f"File saved successfully: {output_file}")
