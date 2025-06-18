@@ -22,13 +22,13 @@ if __name__ == '__main__':
     dirout = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data/'
 
     colorCat=['tab:red', 'tab:orange', 'tab:pink', 'tab:purple' ,'tab:brown', 'tab:cyan' ,'tab:blue']
-    color_dict = {'hazard category 1':colorCat[0], 
-                  'hazard category 2':colorCat[1],
-                  'hazard category 3':colorCat[2],
+    color_dict = {'hazard category 1':colorCat[6], 
+                  'hazard category 2':colorCat[5],
+                  'hazard category 3':colorCat[4],
                   'hazard category 4':colorCat[3],
-                  'hazard category 5':colorCat[4],
-                  'hazard category 6':colorCat[5],
-                  'hazard category 7':colorCat[6]}
+                  'hazard category 5':colorCat[2],
+                  'hazard category 6':colorCat[1],
+                  'hazard category 7':colorCat[0]}
 
     print('Load CLC categories and classify by hazard level ...', end='')
     sys.stdout.flush()
@@ -45,9 +45,9 @@ if __name__ == '__main__':
 
     # Classificació segons AI
     fuelCat_all['IAI'] = -999
-    fuelCat_all.loc[fuelCat_all['AI'] > 0.9, 'IAI'] = 0
+    fuelCat_all.loc[fuelCat_all['AI'] > 0.9, 'IAI'] = 2
     fuelCat_all.loc[(fuelCat_all['AI'] > 0) & (fuelCat_all['AI'] <= 0.9), 'IAI'] = 1
-    fuelCat_all.loc[fuelCat_all['AI'] <= 0, 'IAI'] = 2
+    fuelCat_all.loc[fuelCat_all['AI'] <= 0, 'IAI'] = 0
 
     # Categoria final de perill
     fuelCat_all['IFH'] = fuelCat_all['ICat'] + fuelCat_all['IAI']
