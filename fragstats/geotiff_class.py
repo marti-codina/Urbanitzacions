@@ -48,7 +48,8 @@ with rasterio.open(raster_path) as src:
         valid_mask = (data != NODATA)
         
         # Aplicar la reclassificació només als píxels vàlids
-        reclassified = np.full_like(data, NODATA)  # Inicialitzar tot a NoData
+        # Nova versió (assigna 0 als NoData)
+        reclassified = np.full_like(data, 0)  # Inicialitzar tot a 0 (nou NoData)
         reclassified[valid_mask] = np.where(np.isin(data[valid_mask], vegetation_vals), 1, 2)
 
         # ⚙️ Actualitzar metadades
@@ -60,7 +61,7 @@ with rasterio.open(raster_path) as src:
             "transform": out_transform,
             "count": 1,
             "dtype": "uint8",
-            "nodata": NODATA  # Especificar el valor NoData
+            "nodata": 0  # Especificar el valor NoData
         })
 
         # 🏷️ Nom del fitxer de sortida

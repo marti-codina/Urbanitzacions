@@ -10,7 +10,7 @@ from difflib import get_close_matches  # Per a matching de noms aproximat
 input_rasters = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/rasters_URB"
 class_file = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/URB_AI_results.class"
 original_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp"
-output_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/quadrats_AI.shp"
+output_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/AI_URB.shp"
 
 # 1. Funció per netejar noms
 def clean_name(name):
