@@ -3,12 +3,12 @@ import geopandas as gpd
 import numpy as np
 import os
 
-data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
+data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data/'
 dataout = data  # pots deixar-ho així si la sortida va al mateix lloc
 
 # Carrega les capes
-AI = gpd.read_file(data + 'Aggregation_index/data/fuelCategory_all_v2.geojson')
-urb_file = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp')
+AI = gpd.read_file(data + 'Fuel_AI_all.geojson')
+urb_file = gpd.read_file('C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp')
 
 # Assegura't que la columna "nom" existeix
 assert "NOM" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
@@ -16,20 +16,11 @@ assert "NOM" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
 AI['Area_veg'] = AI.geometry.area
 urb_file = urb_file.rename(columns={'Area':'Area_urb'})
 
-# Diccionari de reemplaçament per ICat
-reemplacament = {
-    1: 5,
-    2: 4,
-    3: 3,
-    4: 2,
-    5: 1
-}
+
 
 # Manté les columnes necessàries incloent IAI i ICat
 AI_selceted = AI[["IFH", "geometry", "Area_veg", "NOM", "IAI", "ICat"]]
 
-# Aplicar el canvi a ICat
-AI_selceted['ICat'] = AI_selceted['ICat'].map(reemplacament)
 
 # Unió espacial
 AI_urb = AI_selceted.sjoin(urb_file[["NOM", "geometry", "Area_urb"]], how='inner', predicate='intersects')
@@ -41,26 +32,26 @@ AI_urb["weighted_ICat"] = AI_urb["ICat"] * AI_urb["Area_veg"]
 
 # Agregació per IFH
 result_IFH = AI_urb.groupby('index_right').agg(
-    weighted_avg_IFH=('weighted_IFH', 'sum'),
+    IFH_urb=('weighted_IFH', 'sum'),
     total_veg_area=('Area_veg', 'sum')
 )
-result_IFH['weighted_avg_IFH'] = result_IFH['weighted_avg_IFH'] / result_IFH['total_veg_area']
+result_IFH['IFH_urb'] = result_IFH['IFH_urb'] / result_IFH['total_veg_area']
 result_IFH = result_IFH.reset_index()
 
 # Agregació per IAI
 result_IAI = AI_urb.groupby('index_right').agg(
-    weighted_avg_IAI=('weighted_IAI', 'sum'),
+    IAI_urb=('weighted_IAI', 'sum'),
     total_veg_area=('Area_veg', 'sum')
 )
-result_IAI['weighted_avg_IAI'] = result_IAI['weighted_avg_IAI'] / result_IAI['total_veg_area']
+result_IAI['IAI_irb'] = result_IAI['IAI_urb'] / result_IAI['total_veg_area']
 result_IAI = result_IAI.reset_index()
 
 # Agregació per ICat
 result_ICat = AI_urb.groupby('index_right').agg(
-    weighted_avg_ICat=('weighted_ICat', 'sum'),
+    ICat_urb=('weighted_ICat', 'sum'),
     total_veg_area=('Area_veg', 'sum')
 )
-result_ICat['weighted_avg_ICat'] = result_ICat['weighted_avg_ICat'] / result_ICat['total_veg_area']
+result_ICat['ICat_urb'] = result_ICat['ICat_urb'] / result_ICat['total_veg_area']
 result_ICat = result_ICat.reset_index()
 
 # Fusiona tots els resultats
@@ -72,17 +63,28 @@ urb_with_avg = urb_file.merge(result, left_index=True, right_on='index_right', h
 urb_with_avg = urb_with_avg.drop(columns=['index_right'])
 
 # Calcula els nous índexs
-urb_with_avg['IFH_urb'] = (
-    urb_with_avg['weighted_avg_IFH'] / 
+urb_with_avg['IFH_rel'] = (
+    urb_with_avg['IFH_urb'] *
     (urb_with_avg['total_veg_area'] / urb_with_avg['Area_urb'])
 )
 
-urb_with_avg['AI_urb'] = urb_with_avg['weighted_avg_IAI']
+tot_IFH_max = urb_with_avg['IFH_rel'].max()
+tot_IFH_min = urb_with_avg['IFH_rel'].min()
 
-urb_with_avg['ICat_urb'] = urb_with_avg['weighted_avg_ICat'] 
+if tot_IFH_max == tot_IFH_min:
+    urb_with_avg['IFH_rel'] = 0.0
+else:
+    urb_with_avg['IFH_norm'] = (urb_with_avg['IFH_rel'] - tot_IFH_min) / (tot_IFH_max - tot_IFH_min)
+
+# Classificació de IFH_norm
+urb_with_avg['IFH_class'] = 1  # Valor per defecte (baix)
+urb_with_avg.loc[(urb_with_avg['IFH_norm'] >= 0.33) & (urb_with_avg['IFH_norm'] < 0.66), 'IFH_class'] = 2  # Mig
+urb_with_avg.loc[urb_with_avg['IFH_norm'] >= 0.66, 'IFH_class'] = 3  # Alt
+
 
 # Desa el resultat
 output_file = os.path.join(dataout, "urb_AI.shp")
 urb_with_avg.to_file(output_file)
+
 
 print("Shapefile URB_AI.shp guardat correctament.")

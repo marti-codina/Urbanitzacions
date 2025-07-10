@@ -1,0 +1,6 @@
+poligon_id,error
+1,Network error: graph_from_polygon() got an unexpected keyword argument 'clean_periphery'
+2,Network error: graph_from_polygon() got an unexpected keyword argument 'clean_periphery'
+3,Network error: graph_from_polygon() got an unexpected keyword argument 'clean_periphery'
+4,Network error: graph_from_polygon() got an unexpected keyword argument 'clean_periphery'
+5,Network error: graph_from_polygon() got an unexpected keyword argument 'clean_periphery'

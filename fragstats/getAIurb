@@ -1,0 +1,109 @@
+import os
+import rasterio
+from rasterio.merge import merge
+import geopandas as gpd
+from shapely.geometry import Polygon
+import pandas as pd
+
+# 📂 Configuració de directoris
+input_dir = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/20x20_tiles"
+class_file = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/20x20fragstats.class"  # Fitxer amb LID, adreça i AI
+shp = ""
+output_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/quadrats_AI.shp"
+
+# 1. Lectura del fitxer .class
+try:
+    # Llegim el fitxer .class (separat per comes amb espais opcionals)
+    df = pd.read_csv(class_file, sep=',\s*', engine='python', header=0)
+    df.columns = df.columns.str.strip()
+    
+    # Netegem i convertim valors
+    df['AI'] = pd.to_numeric(df['AI'], errors='coerce').fillna(0)
+    
+    # Extraiem el nom curt del fitxer des de LID
+    df['nom_fitxer'] = df['LID'].str.strip().apply(os.path.basename)
+    
+    print("\n[DEBUG] Mostra de dades del .class:")
+    print(df[['nom_fitxer', 'AI']].head())
+except Exception as e:
+    print(f"\n[ERROR] Lectura del fitxer .class: {e}")
+    exit()
+
+# 2. Creació del diccionari d'AI
+ai_dict = {}
+for _, row in df.iterrows():
+    try:
+        # Extraiem id, fila, columna del nom del fitxer
+        parts = row['nom_fitxer'].replace('.tif', '').split('_')
+        if len(parts) >= 4:
+            key = (int(parts[1]), int(parts[2]), int(parts[3]))  # (id, fila, columna)
+            ai_dict[key] = float(row['AI'])
+    except Exception as e:
+        print(f"[WARNING] Error processant {row['nom_fitxer']}: {e}")
+
+print(f"\n[STATUS] S'han processat {len(ai_dict)} entrades del .class")
+
+# 3. Processament dels fitxers GeoTIFF
+poligons = []
+dades = []
+missing_count = 0
+
+for filename in os.listdir(input_dir):
+    if filename.lower().endswith('.tif'):
+        try:
+            # Extraiem components del nom del fitxer
+            parts = filename.replace('.tif', '').split('_')
+            if len(parts) >= 4:
+                id_zona = int(parts[1])
+                fila = int(parts[2])
+                columna = int(parts[3])
+                
+                # Obtenim l'AI (0 si no es troba)
+                ai = ai_dict.get((id_zona, fila, columna), 0.0)
+                
+                with rasterio.open(os.path.join(input_dir, filename)) as src:
+                    bounds = src.bounds
+                    geometry = Polygon([
+                        (bounds.left, bounds.bottom),
+                        (bounds.left, bounds.top),
+                        (bounds.right, bounds.top),
+                        (bounds.right, bounds.bottom)
+                    ])
+                    
+                    poligons.append(geometry)
+                    dades.append({
+                        'id_zona': id_zona,
+                        'fila': fila,
+                        'columna': columna,
+                        'AI': ai,
+                        'fitxer': filename
+                    })
+                    
+                    if (id_zona, fila, columna) not in ai_dict:
+                        missing_count += 1
+        except Exception as e:
+            print(f"[WARNING] Error processant {filename}: {e}")
+
+# 4. Generació del shapefile
+if poligons:
+    gdf = gpd.GeoDataFrame(dades, geometry=poligons, crs="EPSG:25831")
+    
+    # Estadístiques
+    total = len(poligons)
+    with_ai = len(gdf[gdf['AI'] > 0])
+    
+    try:
+        gdf.to_file(output_shp)
+        print("\n[RESULTAT FINAL]")
+        print(f"Shapefile generat a: {output_shp}")
+        print(f"Quadrats processats: {total}")
+        print(f"Quadrats amb AI>0: {with_ai}")
+        print(f"Quadrats amb AI=0: {total - with_ai}")
+        print(f"Fitxers no trobats al .class: {missing_count}")
+        
+        print("\n[DEBUG] Mostra de resultats:")
+        print(gdf[['id_zona', 'fila', 'columna', 'AI']].head())
+    except Exception as e:
+        print(f"\n[ERROR] Error guardant shapefile: {e}")
+else:
+    print("\n[ERROR] No s'han trobat quadrats vàlids per processar")

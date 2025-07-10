@@ -89,7 +89,7 @@ def dist2FuelCat(indir,fuelCat, indus):
 def star_AIpoly(param):
     return AIpoly(*param)
 
-def AIpoly(gdf, ipo, ptdx = 2, dbox = 20., PoverA=0.05):
+def AIpoly(gdf, ipo, ptdx = 10, dbox = 100., PoverA=0.1):
 
     poly = gdf[ipo:ipo+1]
     
@@ -198,6 +198,7 @@ def reproject_raster(src_band, src_bounds, src_transform, src_crs, dst_crs, reso
 
 
 ##########################
+"""
 if __name__ == '__main__':
     gdf = gpd.read_file('./gdf-testCat1.geojson')
     dbox = 200.
@@ -211,7 +212,7 @@ if __name__ == '__main__':
     plt.xlabel('AI')
     plt.ylabel('Freqüència')
     plt.show()
-
+"""
     #indir = '/mnt/dataEstrella/OSM/FuelCategories/'
     #wood = gpd.read_file(indir+'wood.shp')
 

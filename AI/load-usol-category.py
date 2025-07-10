@@ -18,11 +18,11 @@ print('fuel clc')
 indir = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data'
 outdir = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data/usol/'
 fuelCatTag = []
-fuelCatTag.append([221,225]) #1
-fuelCatTag.append([223,227]) #2
+fuelCatTag.append([234]) #1
+fuelCatTag.append([228])#2
 fuelCatTag.append([222,224,226,229,346]) #3
-fuelCatTag.append([228]) #4
-fuelCatTag.append([234]) #5
+fuelCatTag.append([223,227])  #4
+fuelCatTag.append([221,225]) #5
 
 clc = gpd.read_file(indir+'/usol_pilot.shp')
 to_latlon = pyproj.Transformer.from_crs(clc.crs, 'epsg:25831')

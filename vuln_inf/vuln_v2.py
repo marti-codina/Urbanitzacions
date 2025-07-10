@@ -41,7 +41,7 @@ buildings_in_urb = gpd.sjoin(
     left_df=edificis_vulnerables[['id', 'tipus', 'vulnerabilitat', 'puntuacio', 'geometry']].reset_index(drop=True),
     right_df=urb[['NOM', 'geometry']].reset_index(drop=True),
     how='inner',
-    predicate='within'
+    predicate='intersects'
 )
 
 # 6. Crear resum per NOM i vulnerabilitat
@@ -88,9 +88,15 @@ tot_vuln_min = result_data['TOT_vuln'].min()
 
 # Evitar divisió per zero si totes les urbanitzacions tenen el mateix valor
 if tot_vuln_max == tot_vuln_min:
-    result_data['Vulnerabilitat_normalitzada'] = 0.0
+    result_data['Vuln_norm'] = 0.0
 else:
-    result_data['Vulnerabilitat_normalitzada'] = result_data['TOT_vuln'] / (tot_vuln_max - tot_vuln_min)
+    result_data['Vuln_norm'] = (result_data['TOT_vuln'] - tot_vuln_min) / (tot_vuln_max - tot_vuln_min)
+
+# 9.1 Crear la columna Vuln_class basada en Vuln_norm
+result_data['Vuln_class'] = 1  # Valor per defecte (baix)
+
+result_data.loc[(result_data['Vuln_norm'] >= 0.33) & (result_data['Vuln_norm'] < 0.66), 'Vuln_class'] = 2  # Mig
+result_data.loc[result_data['Vuln_norm'] >= 0.66, 'Vuln_class'] = 3  # Alt
 
 # 10. Guardar resultats
 output_file = os.path.join(dataout, "URB_VULN_NORM.shp")
@@ -99,7 +105,7 @@ result_data.to_file(output_file)
 # 11. Mostrar resum
 print("Resum d'edificis i vulnerabilitat:")
 print(result_data[['NOM', 'High_vuln_count', 'Medium_vuln_count', 'Low_vuln_count', 
-                  'Total_edificis', 'TOT_vuln', 'Vulnerabilitat_normalitzada']].head())
+                  'Total_edificis', 'TOT_vuln', 'Vuln_norm', 'Vuln_class']].head())
 print(f"\nFitxer guardat a: {output_file}")
 print(f"\nValors de referència:")
 print(f"TOT_vuln màxim: {tot_vuln_max}")
