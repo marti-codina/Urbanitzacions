@@ -6,13 +6,13 @@ Explicació de càlcul de cadascun dels paràmetres:
    Outpt: WUI Pilot
 
 2) Fuel hazard Index:
-    Vegetation type:
+   Vegetation type:
      Per obtenir el tipus de vegetació e caa urbanitació cal seguir els seguents passos
      1) load-usol-category.py (crea una capa per cada categoria de comustible dines els límits de les urbanitzacions)
      2) ConcatFuels.py
      3) Fuel_Cat.py
-    Aggregation Index:
-     Carpeta fragstats, executar els fitxers en l'ordre:
+   Aggregation Index:
+   Carpeta fragstats, executar els fitxers en l'ordre:
       1) Geotiff_class.py
       2) re-scale.py
       3) batch.py
