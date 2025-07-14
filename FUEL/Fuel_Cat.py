@@ -7,67 +7,52 @@ data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLO
 dataout = data  # pots deixar-ho així si la sortida va al mateix lloc
 
 # Carrega les capes
-AI = gpd.read_file(data + 'Fuel_AI_all.geojson')
+fuel = gpd.read_file(data + 'Fuel_all.geojson')
 urb_file = gpd.read_file('C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp')
 
 # Assegura't que la columna "nom" existeix
 assert "NOM" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
 
-AI['Area_veg'] = AI.geometry.area
+fuel['Area_veg'] = fuel.geometry.area
 urb_file = urb_file.rename(columns={'Area':'Area_urb'})
 
 
 
 # Manté les columnes necessàries incloent IAI i ICat
-AI_selceted = AI[["IFH", "geometry", "Area_veg", "NOM", "IAI", "ICat"]]
+fuel_selceted = fuel[[ "geometry", "Area_veg", "NOM", "ICat"]]
 
 
 # Unió espacial
-AI_urb = AI_selceted.sjoin(urb_file[["NOM", "geometry", "Area_urb"]], how='inner', predicate='intersects')
+fuel_urb = fuel_selceted.sjoin(urb_file[["NOM", "geometry", "Area_urb"]], how='inner', predicate='intersects')
 
 # Càlculs ponderats per les tres variables
-AI_urb["weighted_IFH"] = AI_urb["IFH"] * AI_urb["Area_veg"]
-AI_urb["weighted_IAI"] = AI_urb["IAI"] * AI_urb["Area_veg"]
-AI_urb["weighted_ICat"] = AI_urb["ICat"] * AI_urb["Area_veg"]
+fuel_urb["weighted_ICat"] = fuel_urb["ICat"] * fuel_urb["Area_veg"]
 
-# Agregació per IFH
-result_IFH = AI_urb.groupby('index_right').agg(
-    IFH_urb=('weighted_IFH', 'sum'),
-    total_veg_area=('Area_veg', 'sum')
-)
-result_IFH['IFH_urb'] = result_IFH['IFH_urb'] / result_IFH['total_veg_area']
-result_IFH = result_IFH.reset_index()
 
-# Agregació per IAI
-result_IAI = AI_urb.groupby('index_right').agg(
-    IAI_urb=('weighted_IAI', 'sum'),
-    total_veg_area=('Area_veg', 'sum')
-)
-result_IAI['IAI_irb'] = result_IAI['IAI_urb'] / result_IAI['total_veg_area']
-result_IAI = result_IAI.reset_index()
 
 # Agregació per ICat
-result_ICat = AI_urb.groupby('index_right').agg(
+result_ICat = fuel_urb.groupby('index_right').agg(
     ICat_urb=('weighted_ICat', 'sum'),
     total_veg_area=('Area_veg', 'sum')
 )
-result_ICat['ICat_urb'] = result_ICat['ICat_urb'] / result_ICat['total_veg_area']
+result_ICat['ICat_urb'] = (result_ICat['ICat_urb'] / result_ICat['total_veg_area']).round(0)
 result_ICat = result_ICat.reset_index()
 
-# Fusiona tots els resultats
-result = result_IFH.merge(result_IAI, on=['index_right', 'total_veg_area'], how='left')
-result = result.merge(result_ICat, on=['index_right', 'total_veg_area'], how='left')
 
 # Fusiona amb les dades urbanes
-urb_with_avg = urb_file.merge(result, left_index=True, right_on='index_right', how='left')
+urb_with_avg = urb_file.merge(result_ICat, left_index=True, right_on='index_right', how='left')
 urb_with_avg = urb_with_avg.drop(columns=['index_right'])
 
-# Calcula els nous índexs
-urb_with_avg['IFH_rel'] = (
-    urb_with_avg['IFH_urb'] *
-    (urb_with_avg['total_veg_area'] / urb_with_avg['Area_urb'])
-)
+output_file = os.path.join(dataout, "urb_FCat.shp")
+urb_with_avg.to_file(output_file)
 
+
+
+
+print("Shapefile URB_FCat.shp guardat correctament.")
+
+
+'''
 tot_IFH_max = urb_with_avg['IFH_rel'].max()
 tot_IFH_min = urb_with_avg['IFH_rel'].min()
 
@@ -85,6 +70,4 @@ urb_with_avg.loc[urb_with_avg['IFH_norm'] >= 0.66, 'IFH_class'] = 3  # Alt
 # Desa el resultat
 output_file = os.path.join(dataout, "urb_AI.shp")
 urb_with_avg.to_file(output_file)
-
-
-print("Shapefile URB_AI.shp guardat correctament.")
+'''

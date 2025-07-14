@@ -133,6 +133,9 @@ urban_population = (
     .reset_index()
 )
 
+# Assignar 8 quan URB_TOT és null
+urban_population['URB_TOT'] = urban_population['URB_TOT'].fillna(8)
+
 # Calculate percentage of 65+ population
 urban_population['URB_%_65'] = (urban_population['URB_65+'] / urban_population['URB_TOT']) * 100
 

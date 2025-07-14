@@ -28,7 +28,7 @@ if __name__ == '__main__':
     fuelCat_all = []
 
     for iv in idxclc:
-        fuelCat_ = gpd.read_file(os.path.join(indir, f'fuelCategory{iv}_AI.geojson'))
+        fuelCat_ = gpd.read_file(os.path.join(indir, f'fuelCategory{iv}.geojson'))
         fuelCat_['ICat'] = iv
         fuelCat_['rank'] = f'vegetation category {iv}'
         fuelCat_all.append(fuelCat_)
@@ -36,19 +36,19 @@ if __name__ == '__main__':
     fuelCat_all = pd.concat(fuelCat_all)
 
     # Classificació segons AI
-    fuelCat_all['IAI'] = -999
-    fuelCat_all.loc[fuelCat_all['AI'] > 0.9, 'IAI'] = 2
-    fuelCat_all.loc[(fuelCat_all['AI'] > 0) & (fuelCat_all['AI'] <= 0.9), 'IAI'] = 1
-    fuelCat_all.loc[fuelCat_all['AI'] <= 0, 'IAI'] = 0
+    #fuelCat_all['IAI'] = -999
+    #fuelCat_all.loc[fuelCat_all['AI'] > 0.9, 'IAI'] = 2
+    #fuelCat_all.loc[(fuelCat_all['AI'] > 0) & (fuelCat_all['AI'] <= 0.9), 'IAI'] = 1
+    #fuelCat_all.loc[fuelCat_all['AI'] <= 0, 'IAI'] = 0
 
     # Categoria final de perill
-    fuelCat_all['IFH'] = fuelCat_all['ICat'] + fuelCat_all['IAI']
-    fuelCat_all['FH_rank'] = 'hazard category ' + fuelCat_all['IFH'].astype(str)
+    #fuelCat_all['IFH'] = fuelCat_all['ICat'] + fuelCat_all['IAI']
+    #fuelCat_all['FH_rank'] = 'hazard category ' + fuelCat_all['IFH'].astype(str)
 
     print(' done')
 
     # 🔽 Exportació del fitxer vectorial classificat
-    out_vector_file = os.path.join(dirout, 'Fuel_AI_all.geojson')
+    out_vector_file = os.path.join(dirout, 'Fuel_all.geojson')
     fuelCat_all.to_file(out_vector_file, driver='GeoJSON')
     print(f'Fitxer vectorial desat a: {out_vector_file}')
 
