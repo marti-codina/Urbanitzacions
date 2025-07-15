@@ -1,7 +1,7 @@
 import os
 
 # Configuració
-input_folder = r"C:\Users\marti.codina\Nextcloud\2025 - FIRE-SCENE (subcontract)\METODOLOGIA URBANITZACIONS WUI\Capes GIS\Geotiffs_urb_pilot\rasters_URB\simpl_5m"
+input_folder = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI/simpl_5m"
 output_batch_file = os.path.join(input_folder, "fragstats_batch_5m.fbt")
 
 # Llistar tots els fitxers .tif a la carpeta

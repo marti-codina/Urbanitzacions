@@ -7,10 +7,10 @@ import pandas as pd
 from difflib import get_close_matches  # Per a matching de noms aproximat
 
 # Configuració de paths
-input_rasters = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/rasters_URB"
-class_file = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/URB_AI_results.class"
-original_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp"
-output_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/AI_URB.shp"
+input_rasters = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI/"
+class_file = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI/URB_AI_results.class"
+original_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp"
+output_shp = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI_URB.shp"
 
 # 1. Funció per netejar noms
 def clean_name(name):
@@ -121,21 +121,33 @@ except Exception as e:
 # 7. Guardar resultats
 print("\n[STATUS] Guardant resultat...")
 try:
-    columns_to_keep = [col for col in gdf_original.columns if col != 'AI'] + ['AI']
+    # Afegir la nova columna AI_cat basada en les regles especificades
+    gdf_joined['AI_cat'] = 0  # Valor per defecte (AI = 0)
+    gdf_joined.loc[gdf_joined['AI'] > 0, 'AI_cat'] = 1  # 0 < AI < 90
+    gdf_joined.loc[gdf_joined['AI'] >= 90, 'AI_cat'] = 2  # AI >= 90
+    
+    # Seleccionar columnes per guardar (incloent la nova AI_cat)
+    columns_to_keep = [col for col in gdf_original.columns if col != 'AI'] + ['AI', 'AI_cat']
     gdf_result = gdf_joined[columns_to_keep]
+    
     gdf_result.to_file(output_shp)
     
-    # Estadístiques
+    # Estadístiques actualitzades
     total = len(gdf_result)
     with_ai = len(gdf_result[gdf_result['AI'] > 0])
+    ai_cat_counts = gdf_result['AI_cat'].value_counts().to_dict()
     
     print("\n[RESULTAT FINAL]")
     print(f"Shapefile generat a: {output_shp}")
     print(f"Polígons processats: {total}")
     print(f"Polígons amb AI>0: {with_ai}")
     print(f"Polígons amb AI=0: {total - with_ai}")
+    print("\nDistribució de categories AI_cat:")
+    print(f"AI_cat 0 (AI=0): {ai_cat_counts.get(0, 0)}")
+    print(f"AI_cat 1 (0<AI<90): {ai_cat_counts.get(1, 0)}")
+    print(f"AI_cat 2 (AI>=90): {ai_cat_counts.get(2, 0)}")
     
     print("\n[DEBUG] Mostra de resultats:")
-    print(gdf_result[['NOM', 'AI']].head())
+    print(gdf_result[['NOM', 'AI', 'AI_cat']].head())
 except Exception as e:
     print(f"\n[ERROR] Error guardant shapefile final: {e}")

@@ -12,10 +12,10 @@ import pyproj
 
 
 print('fuel clc')
-indir = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data'
-outdir = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data/usol/'
+indir = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/FUEL/'
+outdir = indir
 
-delimitacio_file = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp'  # Assuming this is the boundary file
+delimitacio_file = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp'  # Assuming this is the boundary file
 cobertes_file = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/cobertes-sol-v1r0-2019-2022.gpkg'  # The land cover file
 
 fuelCatTag = []
@@ -28,9 +28,11 @@ fuelCatTag.append([221,225]) #5
 # Step 1: Perform the intersection between Delimitacio_v1 and cobertes-sol
 print('Loading boundary file...')
 boundary = gpd.read_file(delimitacio_file)
+print(boundary.crs)
 
 print('Loading land cover file...')
-land_cover = gpd.read_file(cobertes_file)
+land_cover = gpd.read_file(cobertes_file, layer='cobertes_sol')
+print(land_cover.crs)
 
 print('Performing intersection...')
 usol_pilot = gpd.overlay(land_cover, boundary, how='intersection')
@@ -39,7 +41,7 @@ usol_pilot = gpd.overlay(land_cover, boundary, how='intersection')
 usol_pilot.to_file(indir + '/usol_pilot.shp')
 
 
-clc = gpd.read_file(indir+'/usol_pilot.shp')
+clc = gpd.read_file(indir+'usol_pilot.shp')
 to_latlon = pyproj.Transformer.from_crs(clc.crs, 'epsg:25831')
 lowerCorner = to_latlon.transform(*clc.total_bounds[:2])
 upperCorner = to_latlon.transform(*clc.total_bounds[2:])
@@ -48,6 +50,7 @@ print(lowerCorner[::-1], upperCorner[::-1])
 print(clc['nivell_2'].unique())
 print(clc['nivell_2'].dtype)
 
+categories = range(1, len(fuelCatTag) + 1)  # Genera [1, 2, 3, ...] fins a la longitud de fuelCatTag
     
 for iv in categories:
     print('  fuel cat: {:d}'.format(iv),end='')

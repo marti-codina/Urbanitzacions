@@ -3,15 +3,15 @@ import geopandas as gpd
 import numpy as np
 import os
 
-data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Aggregation_index/data/'
-dataout = data  # pots deixar-ho així si la sortida va al mateix lloc
+data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/FUEL/'
+dataout = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/'  # pots deixar-ho així si la sortida va al mateix lloc
 
 # Carrega les capes
 fuel = gpd.read_file(data + 'Fuel_all.geojson')
-urb_file = gpd.read_file('C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp')
+urb_file = gpd.read_file('C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp')
 
 # Assegura't que la columna "nom" existeix
-assert "NOM" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
+assert "ID" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
 
 fuel['Area_veg'] = fuel.geometry.area
 urb_file = urb_file.rename(columns={'Area':'Area_urb'})
@@ -19,11 +19,11 @@ urb_file = urb_file.rename(columns={'Area':'Area_urb'})
 
 
 # Manté les columnes necessàries incloent IAI i ICat
-fuel_selceted = fuel[[ "geometry", "Area_veg", "NOM", "ICat"]]
+fuel_selceted = fuel[[ "geometry", "Area_veg", "ID", "ICat"]]
 
 
 # Unió espacial
-fuel_urb = fuel_selceted.sjoin(urb_file[["NOM", "geometry", "Area_urb"]], how='inner', predicate='intersects')
+fuel_urb = fuel_selceted.sjoin(urb_file[["ID", "geometry", "Shape_Area"]], how='inner', predicate='intersects')
 
 # Càlculs ponderats per les tres variables
 fuel_urb["weighted_ICat"] = fuel_urb["ICat"] * fuel_urb["Area_veg"]

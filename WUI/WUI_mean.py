@@ -2,7 +2,7 @@ import geopandas as gpd
 
 # Carregar les capes
 data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
-URB = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp')
+URB = gpd.read_file(data + 'Peri-Urban polygons/FIRE-SCENE_Peri-Urban-polygons_2025_July.shp')
 WUI = gpd.read_file(data + 'Vect_WUI_Cat.shp')  # Assegura't que té el camp 'DN'
 
 # Verificar sistemes de coordenades
@@ -31,6 +31,7 @@ resultats = intersections.groupby('NOM').agg(
 
 # 5. Calcular DN mitjà ponderat
 resultats['DN_mitja'] = (resultats['suma_dn_ponderat'] / resultats['area_total']).round()
+resultats["DN_mitja"] = resultats["DN_mitja"].astype(int)
 
 # 6. Fusionar resultats amb la capa original URB
 URB_final = URB.merge(resultats[['NOM', 'DN_mitja']], on='NOM', how='left')
@@ -39,4 +40,4 @@ URB_final = URB.merge(resultats[['NOM', 'DN_mitja']], on='NOM', how='left')
 print(URB_final[['NOM', 'DN_mitja']].head())
 
 # Guardar resultats
-URB_final.to_file(data + 'WUI_Pilot.shp')
+URB_final.to_file(data + 'Urb_July/WUI_July.shp')

@@ -15,7 +15,7 @@ edi = edi[edi['tipus'] == 'edi'].copy()
 
 # Calcular àrea dels edificis (important fer-ho abans del spatial join)
 edi['area_edifici'] = edi.geometry.area
-edi = edi[edi['area_edifici'] > 45]  # Filtrar per àrea >25m²
+edi = edi[edi['area_edifici'] > 45]  # Filtrar per àrea >45m²
 
 # Assegurar mateix CRS
 if URB.crs != edi.crs:
@@ -35,8 +35,13 @@ result = URB.merge(stats, on='NOM', how='left')
 
 # Omplir NaN
 result['num_edificis'] = result['num_edificis'].fillna(0)
-result['area_total_edificis'] = result['area_total_edificis'].fillna(0)
+
+
+# Afegir nova columna: divisió de l'àrea total entre 14.566
+result['Pobl'] = result['num_edificis'] * 2.6
 
 # Resultat
-print(result[['NOM', 'num_edificis', 'area_total_edificis']])
-result.to_file(dataout + 'URB_amb_edificis_area.shp')
+print(result[['NOM', 'num_edificis', 'Pobl']])
+
+# Guardar resultat
+result.to_file(dataout + 'URB_pob.shp')

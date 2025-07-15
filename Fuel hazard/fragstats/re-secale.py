@@ -79,8 +79,8 @@ def batch_resample(input_folder, output_folder, target_res=10, resampling='mode'
 # Exemple d'ús
 if __name__ == "__main__":
     # Configuració
-    INPUT_DIR = r"C:\Users\marti.codina\Nextcloud\2025 - FIRE-SCENE (subcontract)\METODOLOGIA URBANITZACIONS WUI\Capes GIS\Geotiffs_urb_pilot\rasters_URB"  # Modifica això
-    OUTPUT_DIR = r"C:\Users\marti.codina\Nextcloud\2025 - FIRE-SCENE (subcontract)\METODOLOGIA URBANITZACIONS WUI\Capes GIS\Geotiffs_urb_pilot\rasters_URB\simpl_5m"               # Modifica això
+    INPUT_DIR = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI/"  # Modifica això
+    OUTPUT_DIR = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI/simpl_5m"               # Modifica això
     TARGET_RESOLUTION = 5                    # 10 metres
     RESAMPLING_METHOD = "mode"             # 'average', 'bilinear', 'nearest', etc.
     

@@ -6,9 +6,9 @@ import os
 from rasterio.crs import CRS
 
 # 📁 Fitxers d'entrada
-raster_path = "C:/Users/marti.codina/Downloads/cobertes-sol-v1r0-2023.tif"
-shapefile_path = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp"
-output_dir = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Geotiffs_urb_pilot/rasters_URB"
+raster_path = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/cobertes-sol-v1r0-2023.tif"
+shapefile_path = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp"
+output_dir = "C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/AI/"
 
 # 🛠️ Crear carpeta si no existeix
 os.makedirs(output_dir, exist_ok=True)
@@ -32,7 +32,7 @@ with rasterio.open(raster_path) as src:
 with rasterio.open(raster_path) as src:
     for idx, row in zones.iterrows():
         geom = [row.geometry]
-        nom = str(row['NOM']).strip().replace(" ", "_").replace("/", "-")
+        nom = str(row['ID'])
         
         try:
             # 🪚 Retallar la zona amb màscara (píxels fora del polígon seran NoData)

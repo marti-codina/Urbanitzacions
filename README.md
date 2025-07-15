@@ -1,9 +1,11 @@
 Explicació de càlcul de cadascun dels paràmetres:
 
 Interfície
-   Fitxer WUI_CLASS.py 
+   Fitxer WUI_predominant.py 
    Input: capa polígons urbanitzacions i capa vectorial WUI alcasena
    Outpt: WUI Pilot
+
+   Fitxer WUI_mean no és bo ja que en calcular a la mitjana si per exemple, hi ha categories 2 i 4 dona categoria 3
    
 Fuel hazard Index:
 Vegetation type:
