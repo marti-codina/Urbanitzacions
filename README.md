@@ -1,6 +1,6 @@
 ## Explicació de càlcul de cadascun dels paràmetres:
 
-A continuació es detallen quins fitxers cal executar per calcular els defierents paràmetres de les urbanitzacions. **_Tingues en comte que potser s'hauran de canviar les localitzacions/noms dels fitxers._** 
+A continuació es detallen quins fitxers cal executar per calcular els diferents paràmetres de les urbanitzacions. **_Tingues en comte que potser s'hauran de canviar les localitzacions/noms dels fitxers._** 
 
 # WUI Type:
    Fitxer WUI_predominant.py 
@@ -11,7 +11,7 @@ A continuació es detallen quins fitxers cal executar per calcular els defierent
    
 # Fuel hazard Index:
 Vegetation type:
-Per obtenir el tipus de vegetació e caa urbanitació cal seguir els seguents passos
+Per obtenir el tipus de vegetació de cada urbanitació cal seguir els seguents passos
 1) load-usol-category.py (crea una capa per cada categoria de comustible dines els límits de les urbanitzacions)
 2) ConcatFuels.py
 3) Fuel_Cat.py
@@ -34,4 +34,5 @@ Population:
 1) executar Edi_count.py
 
 # Vulnerability:
-Dades: Geofabrik (15/07/2025)  
+Dades: Geofabrik (15/07/2025)
+Falta acabar de seleccionar els polígons vulnerables amb tots els seus atributs hi ha el fitxer get_vuln_ing.py però no he tingut temps de expreure les dades correctament. Queda pendent doncs, una vegada seleccionades totes les infraestructures d'interès classificar-les en les 3 classes de vulnerabilitat i calcular la vulnaerbilitat de cada urbanització estandaritzantels valors amb tota la mostra d'urbanitzacions.
