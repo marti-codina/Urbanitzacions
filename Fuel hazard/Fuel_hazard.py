@@ -3,22 +3,22 @@ import geopandas as gpd
 import numpy as np
 import os
 
-data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
+data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/'
 dataout = data  # pots deixar-ho així si la sortida va al mateix lloc
 
 # Carrega les capes
 ai = gpd.read_file(data + 'AI_URB.shp')
-veg = gpd.read_file(data + 'urb_FCat.shp')
+veg = gpd.read_file(data + 'FCat_urb.shp')
 
 
 # Manté les columnes necessàries incloent IAI i ICat
-AI_selcet = ai[[ "geometry", "Area", "NOM", "AI", "AI_cat"]]
-veg_select = veg[["geometry", "total_veg_", "NOM", "ICat_urb"]]
+AI_selcet = ai[[ "geometry", "Shape_Area", "AI", "AI_cat", "ID", "NOM"]]
+veg_select = veg[["geometry", "total_V_A", "ID", "ICat_urb"]]
 
 # Fer el merge de les dues capes
-merged = pd.merge(AI_selcet, veg_select, on="NOM", how="left")
+merged = pd.merge(AI_selcet, veg_select, on="ID", how="left")
 
-merged["veg_%"] = (merged["total_veg_"] / merged["Area"])
+merged["veg_%"] = (merged["total_V_A"] / merged["Shape_Area"])
 
 # Calcular Fuel_H segons la fórmula [(total_veg_/Area)*(AI+ICat_urb)].round(0)
 merged["Fuel_H"] = ( merged["veg_%"] * (merged["AI_cat"] + merged["ICat_urb"])).round(0)
@@ -28,7 +28,7 @@ merged["ICat_urb"] = merged["ICat_urb"].astype(int)
 merged["Fuel_H"] = merged["Fuel_H"].astype(int)
 
 # Seleccionar només les columnes necessàries per al nou shapefile
-FH_URB = merged[["geometry_x", "NOM", "Area", "AI", "AI_cat", "veg_%", "ICat_urb", "Fuel_H"]]
+FH_URB = merged[["geometry_x", "ID", "NOM", "Shape_Area", "total_V_A", "AI", "AI_cat", "veg_%", "ICat_urb", "Fuel_H"]]
 
 # Renombrar la columna de geometria perquè sigui consistent
 FH_URB = FH_URB.rename(columns={"geometry_x": "geometry"})

@@ -58,7 +58,8 @@ for iv in categories:
     condition =  (pd.Series([False]*len(clc)))
     for tag in fuelCatTag[iv-1]:
         condition |= (clc['nivell_2']==tag)
-    fuel = clc[condition]
+    fuel = clc[condition].copy()
+    fuel['V_A'] = fuel.geometry.area 
     print(fuel.shape)
         
     fuel.to_file(outdir+'fuelCategory{:d}.geojson'.format(iv), driver="GeoJSON")

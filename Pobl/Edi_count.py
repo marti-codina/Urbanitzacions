@@ -4,11 +4,10 @@ import os
 
 # 1. Carregar les capes
 data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
-dataout = data
+dataout = data + "Urb_July/"
 
 # Carregar urbanitzacions
-URB = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp', 
-                   columns=['NOM', 'MUN_INE', 'CODI', 'TIPUS', 'MUNICIPI', 'COMARCA', 'mapid', 'OBSERVACAIO', 'Area', 'geometry'])
+URB = gpd.read_file(data + 'RAW_URB_J_25/CRS_URB_J_25.shp')
 
 # Carregar edificis i filtrar
 edi = gpd.read_file(data + 'fuxed_construccions_p.gpkg')
@@ -35,7 +34,7 @@ URB_with_count = pd.merge(URB, count_edificis, on='NOM', how='left')
 URB_with_count['num_edificis'] = URB_with_count['num_edificis'].fillna(0).astype(int)
 
 # Si vols guardar el resultat:
-output_path = os.path.join(dataout, 'URB_edificis_count.shp')
+output_path = os.path.join(dataout, 'EDI_urb.shp')
 URB_with_count.to_file(output_path)
 
 print(f"Nombre d'edificis per urbanització calculat i guardat a {output_path}")

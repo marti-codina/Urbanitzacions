@@ -1,73 +1,129 @@
-import pandas as pd
 import geopandas as gpd
-import numpy as np
+import pandas as pd
 import os
+from tqdm import tqdm  # Per a barra de progrés (opcional)
 
-data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/FUEL/'
-dataout = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/'  # pots deixar-ho així si la sortida va al mateix lloc
+def main():
+    # Configuració de paths (verifica que siguin correctes)
+    DATA_DIR = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/FUEL/'
+    OUTPUT_DIR = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/'
+    
+    print("⏳ Carregant dades...")
+    try:
+        # Carrega les dades amb verificació explícita
+        fuel_path = os.path.join(DATA_DIR, 'Fuel_all.geojson')
+        urb_path = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp'
+        
+        if not os.path.exists(fuel_path):
+            raise FileNotFoundError(f"No s'ha trobat el fitxer {fuel_path}")
+        if not os.path.exists(urb_path):
+            raise FileNotFoundError(f"No s'ha trobat el fitxer {urb_path}")
+        
+        fuel = gpd.read_file(fuel_path)
+        urb = gpd.read_file(urb_path)
+        
+        print("✅ Dades carregades correctament")
+        print(f"📊 Polígons de vegetació: {len(fuel)}")
+        print(f"🏘️ Urbanitzacions: {len(urb)}")
+    except Exception as e:
+        print(f"❌ Error en carregar dades: {str(e)}")
+        return
 
-# Carrega les capes
-fuel = gpd.read_file(data + 'Fuel_all.geojson')
-urb_file = gpd.read_file('C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp')
+    # Verificació de CRS (imprescindible)
+    print("\n🔍 Verificant sistemes de coordenades...")
+    print(f"CRS vegetació: {fuel.crs}")
+    print(f"CRS urbanitzacions: {urb.crs}")
+    
+    if fuel.crs != urb.crs:
+        print("⚠️ CRS diferents, convertint urbanitzacions...")
+        urb = urb.to_crs(fuel.crs)
+        print(f"➡️ Nou CRS urbanitzacions: {urb.crs}")
 
-# Assegura't que la columna "nom" existeix
-assert "ID" in urb_file.columns, "No existeix la columna 'nom' a urb_file"
+    # Verificació de columnes necessàries
+    REQUIRED_FUEL_COLS = ['geometry', 'V_A', 'ID', 'ICat']
+    REQUIRED_URB_COLS = ['ID', 'geometry', 'Shape_Area']
+    
+    missing_fuel_cols = [col for col in REQUIRED_FUEL_COLS if col not in fuel.columns]
+    missing_urb_cols = [col for col in REQUIRED_URB_COLS if col not in urb.columns]
+    
+    if missing_fuel_cols:
+        print(f"❌ Falten columnes a vegetació: {missing_fuel_cols}")
+        return
+    if missing_urb_cols:
+        print(f"❌ Falten columnes a urbanitzacions: {missing_urb_cols}")
+        return
+    
+    print("✅ Estructura de dades correcta")
 
-fuel['Area_veg'] = fuel.geometry.area
-urb_file = urb_file.rename(columns={'Area':'Area_urb'})
+    # Processament principal
+    print("\n🔧 Calculant interseccions precises...")
+    results = []
+    
+    # Utilitza tqdm per a barra de progrés (opcional)
+    for _, urbanitzacio in tqdm(urb.iterrows(), total=len(urb)):
+        try:
+            # 1. Intersecció precisa
+            fuel['intersection'] = fuel.geometry.intersection(urbanitzacio.geometry)
+            fuel['intersect_area'] = fuel['intersection'].area
+            
+            # 2. Filtrar interseccions significatives (>1m²)
+            valid = fuel[fuel['intersect_area'] > 1].copy()
+            
+            if len(valid) == 0:
+                results.append({
+                    'ID': urbanitzacio['ID'],
+                    'ICat_urb': 0,
+                    'total_V_A': 0,
+                    'NOM': urbanitzacio.get('NOM', '')
+                })
+                continue
+            
+            # 3. Càlcul ponderat
+            valid['weighted'] = valid['ICat'] * valid['intersect_area']
+            total_weight = valid['weighted'].sum()
+            total_area = valid['intersect_area'].sum()
+            
+            results.append({
+                'ID': urbanitzacio['ID'],
+                'ICat_urb': int(round(total_weight / total_area)),
+                'total_V_A': total_area,
+                'NOM': urbanitzacio.get('NOM', '')
+            })
+        except Exception as e:
+            print(f"⚠️ Error processant urbanització ID {urbanitzacio['ID']}: {str(e)}")
+            continue
 
+    # Verificació de resultats
+    if not results:
+        print("❌ No s'han generat resultats")
+        return
+    
+    print(f"\n📋 Resultats generats per {len(results)} urbanitzacions")
+    
+    # Crear DataFrame amb resultats
+    result_df = pd.DataFrame(results)
+    
+    # Fusionar amb dades originals
+    final = urb.merge(result_df, on='ID', how='left')
+    
+    # Guardar resultats
+    output_path = os.path.join(OUTPUT_DIR, "FCat_urb.shp")
+    try:
+        final.to_file(output_path)
+        print(f"\n💾 Resultat guardat a: {output_path}")
+        
+        # Verificació específica per Cal Sendró
+        if 'NOM' in final.columns:
+            cal_sendro = final[final['NOM'] == 'Cal Sendró']
+            if not cal_sendro.empty:
+                print("\n🔎 Verificació per Cal Sendró:")
+                print(f"Àrea calculada: {cal_sendro['total_V_A'].values[0]:.2f} m²")
+                print(f"ICat_urb: {cal_sendro['ICat_urb'].values[0]}")
+            else:
+                print("\n⚠️ No s'ha trobat Cal Sendró als resultats")
+    except Exception as e:
+        print(f"❌ Error en guardar resultats: {str(e)}")
 
-
-# Manté les columnes necessàries incloent IAI i ICat
-fuel_selceted = fuel[[ "geometry", "Area_veg", "ID", "ICat"]]
-
-
-# Unió espacial
-fuel_urb = fuel_selceted.sjoin(urb_file[["ID", "geometry", "Shape_Area"]], how='inner', predicate='intersects')
-
-# Càlculs ponderats per les tres variables
-fuel_urb["weighted_ICat"] = fuel_urb["ICat"] * fuel_urb["Area_veg"]
-
-
-
-# Agregació per ICat
-result_ICat = fuel_urb.groupby('index_right').agg(
-    ICat_urb=('weighted_ICat', 'sum'),
-    total_veg_area=('Area_veg', 'sum')
-)
-result_ICat['ICat_urb'] = (result_ICat['ICat_urb'] / result_ICat['total_veg_area']).round(0)
-result_ICat = result_ICat.reset_index()
-
-
-# Fusiona amb les dades urbanes
-urb_with_avg = urb_file.merge(result_ICat, left_index=True, right_on='index_right', how='left')
-urb_with_avg = urb_with_avg.drop(columns=['index_right'])
-
-output_file = os.path.join(dataout, "urb_FCat.shp")
-urb_with_avg.to_file(output_file)
-
-
-
-
-print("Shapefile URB_FCat.shp guardat correctament.")
-
-
-'''
-tot_IFH_max = urb_with_avg['IFH_rel'].max()
-tot_IFH_min = urb_with_avg['IFH_rel'].min()
-
-if tot_IFH_max == tot_IFH_min:
-    urb_with_avg['IFH_rel'] = 0.0
-else:
-    urb_with_avg['IFH_norm'] = (urb_with_avg['IFH_rel'] - tot_IFH_min) / (tot_IFH_max - tot_IFH_min)
-
-# Classificació de IFH_norm
-urb_with_avg['IFH_class'] = 1  # Valor per defecte (baix)
-urb_with_avg.loc[(urb_with_avg['IFH_norm'] >= 0.33) & (urb_with_avg['IFH_norm'] < 0.66), 'IFH_class'] = 2  # Mig
-urb_with_avg.loc[urb_with_avg['IFH_norm'] >= 0.66, 'IFH_class'] = 3  # Alt
-
-
-# Desa el resultat
-output_file = os.path.join(dataout, "urb_AI.shp")
-urb_with_avg.to_file(output_file)
-'''
+if __name__ == "__main__":
+    main()
+    print("\n🏁 Procés finalitzat")
