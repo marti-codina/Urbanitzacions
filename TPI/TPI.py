@@ -3,9 +3,9 @@ import numpy as np
 import os
 
 # Input/output paths
-data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/'
+data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Urb_July/TPI/'
 dataout = data  # Using same directory for output
-delimitacio_file = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/Capes PC/Delimitacio_v1.shp'  # Assuming this is the boundary file
+delimitacio_file = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/RAW_URB_J_25/CRS_URB_J_25.shp'  # Assuming this is the boundary file
 tpi = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLOGIA URBANITZACIONS WUI/Capes GIS/TPI_class_CAT_vect.shp'  # The land cover file
 
 print('Loading boundary file...')
@@ -15,14 +15,14 @@ print('Loading land cover file...')
 land_cover = gpd.read_file(tpi)
 
 print('Performing intersection...')
-tpi_pilot = gpd.overlay(tpi, boundary, how='intersection')
+tpi_pilot = gpd.overlay(land_cover, boundary, how='intersection')
 
 # Save the intersected file for future use
-tpi_pilot.to_file(data + 'TPI_PILOT_VECT.shp')
+tpi_pilot.to_file(data + 'TPI_URB_raw.shp')
 
 # Load data
 tpi_file = gpd.read_file(data + 'TPI_PILOT_VECT.shp')
-urb_file = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp').rename(columns={'Area': 'Area_urb'})
+urb_file = gpd.read_file(delimitacio_file).rename(columns={'Shape_Area': 'Area_urb'})
 tpi_file['Area_tpi'] = tpi_file.geometry.area
 
 # Spatial join

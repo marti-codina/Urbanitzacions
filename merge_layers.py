@@ -1,3 +1,4 @@
+import pandas as pd
 import geopandas as gpd
 import os
 
@@ -6,48 +7,60 @@ data = 'C:/Users/marti.codina/Nextcloud/2025 - FIRE-SCENE (subcontract)/METODOLO
 dataout = data
 
 # Load data with selected columns
-URB = gpd.read_file(data + 'Capes PC/Delimitacio_v1.shp', 
-                   columns=['NOM', 'MUN_INE', 'CODI', 'TIPUS', 'MUNICIPI', 'COMARCA', 'mapid', 'OBSERVACAIO', 'Area', 'geometry'])
+URB = gpd.read_file(data + 'RAW_URB_J_25/CRS_URB_J_25.shp', 
+                   columns=['ID', 'NOM', 'TIPUS', 'CODIMUNI', 'NOMMUNI', 'NOMCOMAR', 'NOMVEGUE', 'NOMPROV', 'INE5','Shape_Area', 'AREA', 'geometry'])
 
-WUI = gpd.read_file(data + 'WUI_pilot.shp', columns=['NOM', 'DN_URB'])
-AI = gpd.read_file(data + 'urb_AI.shp', columns=['NOM', 'new_index']).rename(columns={'new_index':'Hazard_MC'})
-POBL = gpd.read_file(data + 'urban_areas_with_population_corrected.shp', 
-                    columns=['NOM', 'building_c', 'URB_TOT', 'URB_HOME', 'URB_DONA', 'URB_VELL'])
-TPI = gpd.read_file(data + 'URB_TPI.shp', columns=['NOM', 'TPI'])
-VULN = gpd.read_file(data + 'Urbanitzacions_Vulnerabilitat_Detallat.shp', columns=['NOM', 'High_vuln_', 'Medium_vul', 'Low_vuln_c', 'Total_edif'])  # Assumint que hi ha un camp 'VULNERAB'
+WUI = gpd.read_file(data + 'Urb_July/WUI_July_pred.shp', columns=['ID', 'DN_dominan'])
+WUI = WUI.rename(columns={'DN_dominan': 'WUI_type'})  # Primer fem el rename
+FH = gpd.read_file(data + 'Urb_July/FH_URB.shp', 
+                    columns=['ID', 'total_V_A', 'AI', 'AI_cat', 'veg_%', 'ICat_urb', 'Fuel_H'])
+EDI = gpd.read_file(data + 'Urb_July/EDI_URB.shp', columns=['ID', 'num_edific'])
 
 # 2. Fer les unions selectives mantenint la geometria original de URB
 capa_final = URB.copy()
 
-# Llista de capes i atributs a fusionar (excloent 'NOM' que s'utilitza per fusionar)
+# Llista de capes i atributs a fusionar
 capes_a_fusionar = [
-    (WUI, ['DN_URB']), #Bo
-    (AI, ['Hazard_MC']), #Bo
-    (POBL, ['building_c', 'URB_TOT', 'URB_HOME', 'URB_DONA', 'URB_VELL']),
-    (TPI, ['TPI']),
-    (VULN, ['High_vuln_', 'Medium_vul', 'Low_vuln_c', 'Total_edif'])
+    (WUI, ['WUI_type']),
+    (FH, ['total_V_A', 'AI', 'AI_cat', 'veg_%', 'ICat_urb', 'Fuel_H']),
+    (EDI, ['num_edific'])
 ]
 
+# Verificar que les columnes existeixen abans de fusionar
+print("Columnes a WUI:", WUI.columns.tolist())
+print("Columnes a FH:", FH.columns.tolist())
+print("Columnes a EDI:", EDI.columns.tolist())
+
 for capa, atributs in capes_a_fusionar:
-    # Seleccionar només els atributs necessaris (incloent 'NOM' per la fusió)
-    cols = ['NOM'] + atributs
+    # Verificar que els atributs existeixen a la capa
+    for attr in atributs:
+        if attr not in capa.columns:
+            raise ValueError(f"L'atribut '{attr}' no existeix a la capa {capa.iloc[0,:].geometry.type}")
+    
+    # Seleccionar només els atributs necessaris (incloent 'ID' per la fusió)
+    cols = ['ID'] + atributs
     capa_final = capa_final.merge(
         capa[cols],
-        on='NOM',
+        on='ID',
         how='left',  # Conserva totes les entrades de la capa base
-        suffixes=('', f'_{capa.iloc[0,:].geometry.type}')  # Sufix identificatiu
+        suffixes=('', f'_{capa.iloc[0,:].geometry.type.lower()}')  # Sufix identificatiu
     )
 
 # 3. Neteja de columnes potencialment duplicades
-# (Mantenim la primera ocurrència de cada columna)
-capa_final = capa_final.loc[:,~capa_final.columns.duplicated()]
+capa_final = capa_final.loc[:, ~capa_final.columns.duplicated()]
 
 # 4. Verificació dels resultats
-print("Columnes finals:", capa_final.columns.tolist())
+print("\nColumnes finals:", capa_final.columns.tolist())
 print("Nombre d'entrades:", len(capa_final))
-print("Geometria conservada?", capa_final.geometry.equals(URB.geometry))  # Hauria de retornar True
+print("Geometria conservada?", capa_final.geometry.equals(URB.geometry))
 
-# 5. Guardar el resultat
-output_path = os.path.join(dataout, "URB_integrated.shp")
-capa_final.to_file(output_path)
-print(f"\nResultat guardat a: {output_path}")
+# 5. Guardar els resultats
+# Shapefile
+output_shp = os.path.join(dataout, "URB_integrated.shp")
+capa_final.to_file(output_shp)
+print(f"\nShapefile guardat a: {output_shp}")
+
+# Excel (sense geometria)
+output_excel = os.path.join(dataout, "URB_integrated_attributes.xlsx")
+pd.DataFrame(capa_final.drop(columns='geometry')).to_excel(output_excel, index=False)
+print(f"Excel amb atributs guardat a: {output_excel}")
